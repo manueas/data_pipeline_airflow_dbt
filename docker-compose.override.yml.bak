@@ -1,0 +1,49 @@
+services:
+  webserver:
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"  # Porta do Airflow UI
+      - "8000:8000"  # Porta do DBT Docs
+    volumes: &common-volumes
+      - ./dags:/usr/local/airflow/dags
+      - ./plugins:/usr/local/airflow/plugins
+      - ./data:/usr/local/airflow/data
+      - ./dbt:/usr/local/airflow/dbt
+      - ./dbt/profiles.yml:/home/astro/.dbt/profiles.yml
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  scheduler:
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes: *common-volumes
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  triggerer:
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes: *common-volumes
+    command: triggerer
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$(hostname)"']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  data:

@@ -1,17 +1,26 @@
 # Dependências principais
-dbt-core==1.8.0
-pendulum==2.1.2
-dbt-postgres==1.8.2
-python-dotenv==1.0.1
+dbt-core
+pendulum
+dbt-postgres
+python-dotenv
+# dbt-core==1.8.0
+# pendulum==2.1.2
+# dbt-postgres==1.8.2
+# python-dotenv==1.0.1
+
 requests==2.32.3
 
 # Dependências de teste
 pytest>=8.0.0
 
 # Airflow e extras necessários
-apache-airflow[postgres,pandas]==2.5.1
+# apache-airflow[postgres,pandas]==2.5.1
+# apache-airflow==3.1.0+astro.1
+pandas
+numpy
+SQLAlchemy
 
 # Fixar versões compatíveis de pandas, numpy e sqlalchemy
-pandas==1.5.3
-numpy==1.24.3
-SQLAlchemy<2.0
+# pandas==1.5.3
+# numpy==1.24.3
+# SQLAlchemy<2.0
