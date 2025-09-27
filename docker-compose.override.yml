@@ -10,10 +10,11 @@ services:
     volumes:
       - postgres_data_volume:/var/lib/postgresql/data
       - ./include/postgres-data-init:/docker-entrypoint-initdb.d
+      - ./data_erp:/usr/local/airflow/data_erp
     ports:
       - "5433:5432"
     networks:
-      - data_network
+      - airflow
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_DATA_USER:-postgres_data}"]
       interval: 5s
@@ -25,6 +26,6 @@ volumes:
     name: postgres_dados_dw_volume
 
 networks:
-  data_network:
-    name: rede_dados_dw
-    driver: bridge
+  airflow:
+    external: true
+    name: data-pipeline-airflow-dbt_6450c6_airflow

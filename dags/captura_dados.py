@@ -1,9 +1,10 @@
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
-from airflow.utils.task_group import TaskGroup  # Manteremos esta por enquanto
+from airflow.utils.task_group import TaskGroup
 from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from sqlalchemy import create_engine
+
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
@@ -140,8 +141,14 @@ def carrega_ativos_para_postgres():
 
     if dataframes:
         df_final = pd.concat(dataframes, ignore_index=True)
-        engine = create_engine(f'postgresql://{os.getenv("POSTGRES_DATA_USER")}:{os.getenv("POSTGRES_DATA_PASSWORD")}@postgres_dados_dw:5432/dw')
-        with engine.connect() as conn:
+        hook = PostgresHook(postgres_conn_id="dados_dw")
+        with hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                # Criar schema se não existir
+                cursor.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
+                conn.commit()
+            
+            # Usar pandas com a conexão do hook
             df_final.to_sql('ativos', con=conn, schema='bronze', if_exists='replace', index=False)
 
 
@@ -173,8 +180,14 @@ def carrega_indicadores_para_postgres():
 
     if dataframes:
         df_final = pd.concat(dataframes, ignore_index=True)
-        engine = create_engine(f'postgresql://{os.getenv("POSTGRES_DATA_USER")}:{os.getenv("POSTGRES_DATA_PASSWORD")}@postgres_dados_dw:5432/dw')
-        with engine.connect() as conn:
+        hook = PostgresHook(postgres_conn_id="dados_dw")
+        with hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                # Criar schema se não existir
+                cursor.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
+                conn.commit()
+            
+            # Usar pandas com a conexão do hook
             df_final.to_sql('indicadores', con=conn, schema='bronze', if_exists='replace', index=False)
 
 
@@ -204,8 +217,14 @@ def carrega_tesouro_para_postgres():
     if dataframes:
         df_final = pd.concat(dataframes, ignore_index=True)
         logging.warning(f"O arquivo deu certo, tem dados {df_final.head()}")
-        engine = create_engine(f'postgresql://{os.getenv("POSTGRES_DATA_USER")}:{os.getenv("POSTGRES_DATA_PASSWORD")}@postgres_dados_dw:5432/dw')
-        with engine.connect() as conn:
+        hook = PostgresHook(postgres_conn_id="dados_dw")
+        with hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                # Criar schema se não existir
+                cursor.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
+                conn.commit()
+            
+            # Usar pandas com a conexão do hook
             df_final.to_sql('tesouro', con=conn, schema='bronze', if_exists='replace', index=False)
 
 

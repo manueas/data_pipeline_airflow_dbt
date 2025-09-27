@@ -3,3 +3,9 @@
 .env
 airflow_settings.yaml
 logs/
+data_erp/
+data/
+bk_banco/
+dbt/target/
+docs/
+powerbi/

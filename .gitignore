@@ -5,3 +5,6 @@ airflow_settings.yaml
 .idea*
 *.pyc
 */__pycache__/*
+/data/*
+/logs/*
+/data_erp/*
