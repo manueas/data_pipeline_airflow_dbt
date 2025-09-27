@@ -1,0 +1,19 @@
+x-airflow-common:
+  &airflow-common
+  networks:
+    - data_network
+
+services:
+  webserver:
+    <<: *airflow-common
+
+  scheduler:
+    <<: *airflow-common
+
+  triggerer:
+    <<: *airflow-common
+
+networks:
+  data_network:
+    external: true
+    name: rede_dados_dw

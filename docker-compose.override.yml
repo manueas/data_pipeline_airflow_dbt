@@ -1,0 +1,30 @@
+version: '3'
+services:
+  postgres_data:
+    image: postgres:13
+    container_name: postgres_dados_dw
+    environment:
+      POSTGRES_USER: ${POSTGRES_DATA_USER:-postgres_data}
+      POSTGRES_PASSWORD: ${POSTGRES_DATA_PASSWORD:-secure_password}
+      POSTGRES_DB: dw
+    volumes:
+      - postgres_data_volume:/var/lib/postgresql/data
+      - ./include/postgres-data-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    networks:
+      - data_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_DATA_USER:-postgres_data}"]
+      interval: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  postgres_data_volume:
+    name: postgres_dados_dw_volume
+
+networks:
+  data_network:
+    name: rede_dados_dw
+    driver: bridge

@@ -22,8 +22,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: airflow
+      POSTGRES_MULTIPLE_DATABASES: airflow,dw_nerds_prd
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
+      - ./include/postgres-init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:

@@ -1,0 +1,35 @@
+# version: '3'
+services:
+  nifi:
+    image: apache/nifi:1.25.0
+    container_name: nifi
+    ports:
+      - "8443:8443"
+    environment:
+      - NIFI_UID=${NIFI_UID}
+      - NIFI_GID=${NIFI_GID}
+      - NIFI_WEB_HTTPS_PORT=8443
+      - NIFI_SENSITIVE_PROPS_KEY=a_secret_key_for_encryption
+      - SINGLE_USER_CREDENTIALS_USERNAME=nifi
+      - SINGLE_USER_CREDENTIALS_PASSWORD=HGd15bvfv8744ghbdhgdv7895agqERAo
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /opt/nifi/nifi-current/conf
+      - nifi-database_repository:/opt/nifi/nifi-current/database_repository
+      - nifi-flowfile_repository:/opt/nifi/nifi-current/flowfile_repository
+      - nifi-content_repository:/opt/nifi/nifi-current/content_repository
+      - nifi-provenance_repository:/opt/nifi/nifi-current/provenance_repository
+    networks:
+      - nifi_network
+
+volumes:
+  nifi-conf:
+  nifi-database_repository:
+  nifi-flowfile_repository:
+  nifi-content_repository:
+  nifi-provenance_repository:
+
+networks:
+  nifi_network:
+    name: nifi_network
+    driver: bridge

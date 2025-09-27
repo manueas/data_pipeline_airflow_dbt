@@ -1,7 +1,7 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.utils.task_group import TaskGroup
-from airflow.operators.bash import BashOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.utils.task_group import TaskGroup  # Manteremos esta por enquanto
+from airflow.providers.standard.operators.bash import BashOperator
 
 from sqlalchemy import create_engine
 from datetime import datetime, timedelta
@@ -129,7 +129,7 @@ def carrega_ativos_para_postgres():
                 }, inplace=True)
                 df["ticker"] = dados["Meta Data"]["2. Symbol"]
                 df = df.astype({
-                    "data": "datetime64",
+                    "data": "datetime64[ns]",
                     "open": "float",
                     "high": "float",
                     "low": "float",
@@ -140,7 +140,7 @@ def carrega_ativos_para_postgres():
 
     if dataframes:
         df_final = pd.concat(dataframes, ignore_index=True)
-        engine = create_engine('postgresql://postgres:postgres@postgres:5432/dw_nerds_prd')
+        engine = create_engine(f'postgresql://{os.getenv("POSTGRES_DATA_USER")}:{os.getenv("POSTGRES_DATA_PASSWORD")}@postgres_dados_dw:5432/dw')
         with engine.connect() as conn:
             df_final.to_sql('ativos', con=conn, schema='bronze', if_exists='replace', index=False)
 
@@ -166,14 +166,14 @@ def carrega_indicadores_para_postgres():
                     df["ticker"] = dados["Meta Data"]["1: Symbol"]
                     df["indicador"] = dados["Meta Data"]["2: Indicator"]
                     df = df.astype({
-                        "data": "datetime64",
+                        "data": "datetime64[ns]",
                         "valor": "float"
                     })
                     dataframes.append(df)
 
     if dataframes:
         df_final = pd.concat(dataframes, ignore_index=True)
-        engine = create_engine('postgresql://postgres:postgres@postgres:5432/dw_nerds_prd')
+        engine = create_engine(f'postgresql://{os.getenv("POSTGRES_DATA_USER")}:{os.getenv("POSTGRES_DATA_PASSWORD")}@postgres_dados_dw:5432/dw')
         with engine.connect() as conn:
             df_final.to_sql('indicadores', con=conn, schema='bronze', if_exists='replace', index=False)
 
@@ -195,7 +195,7 @@ def carrega_tesouro_para_postgres():
                 }, inplace=True)
                 df['valor'] = pd.to_numeric(df['valor'], errors='coerce').round(3)
                 df = df.astype({
-                    "data": "datetime64",
+                    "data": "datetime64[ns]",
                     "valor": "float"
                 })
                 dataframes.append(df)
@@ -204,7 +204,7 @@ def carrega_tesouro_para_postgres():
     if dataframes:
         df_final = pd.concat(dataframes, ignore_index=True)
         logging.warning(f"O arquivo deu certo, tem dados {df_final.head()}")
-        engine = create_engine('postgresql://postgres:postgres@postgres:5432/dw_nerds_prd')
+        engine = create_engine(f'postgresql://{os.getenv("POSTGRES_DATA_USER")}:{os.getenv("POSTGRES_DATA_PASSWORD")}@postgres_dados_dw:5432/dw')
         with engine.connect() as conn:
             df_final.to_sql('tesouro', con=conn, schema='bronze', if_exists='replace', index=False)
 
@@ -219,7 +219,7 @@ default_args = {
 with DAG(
     dag_id="captura_transformacao_com_taskgroups",
     default_args=default_args,
-    schedule_interval="@daily",
+    schedule="@daily",
     start_date=datetime(2024, 1, 1),
     catchup=False
 ) as dag:
@@ -258,20 +258,33 @@ with DAG(
 
     # Grupo: Transformações com DBT
     with TaskGroup("transformacoes_dbt") as transformacoes_dbt:
+        # Criar diretório de logs com permissões corretas
+        create_dbt_dirs = BashOperator(
+            task_id="create_dbt_dirs",
+            bash_command=(
+                "mkdir -p /usr/local/airflow/dbt/logs && "
+                "chmod -R 777 /usr/local/airflow/dbt/logs"
+            )
+        )
+        
         run_dbt_silver = BashOperator(
             task_id="run_dbt_silver",
             bash_command=(
                 "cd /usr/local/airflow/dbt && "
-                "dbt run --profiles-dir /usr/local/airflow/dbt --project-dir /usr/local/airflow/dbt --select prata"
+                "dbt run --profiles-dir /usr/local/airflow/dbt --project-dir /usr/local/airflow/dbt --select prata --log-path /tmp/dbt_logs"
             )
         )
+        
         run_dbt_gold = BashOperator(
             task_id="run_dbt_gold",
             bash_command=(
                 "cd /usr/local/airflow/dbt && "
-                "dbt run --profiles-dir /usr/local/airflow/dbt --project-dir /usr/local/airflow/dbt --select ouro"
+                "dbt run --profiles-dir /usr/local/airflow/dbt --project-dir /usr/local/airflow/dbt --select ouro --log-path /tmp/dbt_logs"
             )
         )
+        
+        # Definir dependências dentro do grupo
+        create_dbt_dirs >> [run_dbt_silver, run_dbt_gold]
 
         # Dependência entre Silver e Gold
         run_dbt_silver >> run_dbt_gold
